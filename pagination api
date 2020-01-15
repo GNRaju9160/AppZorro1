@@ -1,0 +1,137 @@
+
+import UIKit
+import Alamofire
+
+class ApiGetDataVC: UIViewController {
+    
+    @IBOutlet weak var tblVw: UITableView!
+    var arrData = [ModelData]()
+    let urlString = "https://rawuncensored.com/api.php"
+    var currentpage = 1
+    var totalPages = Int()
+    var a = 3
+    var b = 4
+    
+    
+    //MARK:- View lifecycle
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        sum (n1:a, n2:b)
+        myApi() {
+            self.tblVw.reloadData()
+            
+        }
+    }
+    //MARK:- Custom Functions
+    func sum (n1: Int, n2: Int) {
+        var sum2 = a+b
+        print("sum is \(sum2)")
+    }
+    func myApi(completion:@escaping() -> Void) {
+        let parameters: Parameters = ["action": "follow_list", "user_id": "1", "user_type": "1", "pageNo": currentpage]
+        Alamofire.request(urlString, method: .get, parameters: parameters).responseJSON { response in
+            if let resp = response.result.value as? [String : Any],
+                let respData = resp["response"] as? [String: Any],
+                let data = respData["data"] as? [String: Any],
+                let dataM = data["detail"] as? [[String:Any]] {
+                if let totalpgs = respData["last_page"] as? Int {
+                    self.totalPages = totalpgs
+                }else if let totalpgs = respData["last_page"] as? String {
+                    self.totalPages = Int(totalpgs) ?? 0
+                }
+                for i in dataM {
+                    let datar = ModelData(i)
+                    self.arrData.append(datar)
+                }
+                //                DispatchQueue.main.async {
+                //                   self.tblVw.reloadData()
+                //               }
+                print(respData)
+                completion()
+            }
+        }
+    }
+}
+extension ApiGetDataVC : UITableViewDelegate,UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return arrData.count
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "ApiGetDataCell") as! ApiGetDataCell
+        let cellData : ModelData
+        cellData = arrData[indexPath.row]
+        cell.lblUserId.text = cellData.use_Id
+        cell.lblUserName.text = cellData.userName
+        cell.lblFullName.text = cellData.fullName
+        cell.lblUserType.text = cellData.userType
+        if let imgprofileUrl = URL(string:cellData.profilepic){
+            cell.imgVwProfile.loadn(url:imgprofileUrl)//.image = data.profile_pic
+        }
+        cell.imgVwProfile.layer.borderWidth = 1.0
+        cell.imgVwProfile.layer.borderColor = UIColor.red.cgColor
+        cell.imgVwProfile.clipsToBounds = true
+        
+        return cell
+    }
+    // called on finger up if the user dragged. decelerate is true if it will continue moving afterwards
+    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        let offset: CGPoint = scrollView.contentOffset
+        let bounds: CGRect = scrollView.bounds
+        let size: CGSize = scrollView.contentSize
+        let inset: UIEdgeInsets = scrollView.contentInset
+        let y: CGFloat = offset.y + bounds.size.height - inset.bottom
+        let h: CGFloat = size.height
+        let reloadDistance: CGFloat = 10
+        if (y > h + reloadDistance) {
+            print("load more rows")
+            if currentpage+1 <= totalPages {
+                currentpage += 1
+                myApi(){
+                    self.tblVw.reloadData()
+                }
+            }
+        }
+    }
+
+}
+let imageCatch = NSCache<AnyObject, AnyObject>()
+extension UIImageView {
+    func loadn(url: URL) {
+        image = nil
+        if let imageFromCatch = imageCatch.object(forKey: URL.self as AnyObject) as? UIImage {
+            self.image = imageFromCatch
+            return
+        }
+        DispatchQueue.global().async { [weak self] in
+            if let data = try? Data(contentsOf: url) {
+                if let image = UIImage(data: data) {
+                    imageCatch.setObject(image, forKey: URL.self as AnyObject)
+                    
+                    DispatchQueue.main.async {
+                        self?.image = image
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+//{
+//    "response": {
+//        "message": "success",
+//        "status": "1",
+//        "total_records": "12",
+//        "last_page": "2",
+//        "data": {
+//            "followers": "12",
+//            "following": "24",
+//            "detail": [
+//            {
+//            "user_id": "2",
+//            "username": "akshay",
+//            "fullname": "akshay",
+//            "profile_pic": "https://rawuncensored.com/uploads/profile/img_1926424850.jpg",
+//            "users_type": "2"
+//           },
