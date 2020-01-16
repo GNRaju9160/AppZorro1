@@ -84,6 +84,14 @@ extension ApiGetDataVC : UITableViewDelegate,UITableViewDataSource {
         let reloadDistance: CGFloat = 10
         if (y > h + reloadDistance) {
             print("load more rows")
+           
+           // for activity Indicator
+            let pagingSpinner = UIActivityIndicatorView(style: .gray)
+            pagingSpinner.startAnimating()
+            pagingSpinner.color = UIColor(red: 22.0/255.0, green: 106.0/255.0, blue: 176.0/255.0, alpha: 1.0)
+            pagingSpinner.hidesWhenStopped = true
+            tblVw.tableFooterView = pagingSpinner
+           
             if currentpage+1 <= totalPages {
                 currentpage += 1
                 myApi(){
